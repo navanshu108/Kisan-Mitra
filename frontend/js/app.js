@@ -746,3 +746,78 @@ function fillDemoData() {
 
 // Init
 initLanguage();
+
+// ==========================================
+// MULTIMODAL UPLOAD LOGIC
+// ==========================================
+const mmFile = document.getElementById('dropzone-file');
+const mmUploadArea = document.getElementById('mm-upload-area');
+const mmPreviewArea = document.getElementById('mm-preview-area');
+const mmImagePreview = document.getElementById('mm-image-preview');
+const mmBtnAnalyze = document.getElementById('btn-analyze-doc');
+const mmSpinner = document.getElementById('mm-spinner');
+const mmResultArea = document.getElementById('mm-result-area');
+const mmResultText = document.getElementById('mm-result-text');
+
+let currentFile = null;
+
+mmFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        currentFile = file;
+        mmUploadArea.classList.add('hidden');
+        mmPreviewArea.classList.remove('hidden');
+        mmResultArea.classList.add('hidden');
+        const reader = new FileReader();
+        reader.onload = (e) => { mmImagePreview.src = e.target.result; };
+        reader.readAsDataURL(file);
+    }
+});
+
+function resetMultimodal() {
+    currentFile = null;
+    mmFile.value = '';
+    mmUploadArea.classList.remove('hidden');
+    mmPreviewArea.classList.add('hidden');
+    mmResultArea.classList.add('hidden');
+}
+
+window.resetMultimodal = resetMultimodal; // Expose to global scope for index.html onclick
+
+mmBtnAnalyze.addEventListener('click', async () => {
+    if (!currentFile) return;
+    
+    mmSpinner.classList.remove('hidden');
+    mmBtnAnalyze.classList.add('opacity-50');
+    mmResultArea.classList.add('hidden');
+    
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('language', state.language);
+    
+    try {
+        const res = await fetch(`${API_URL}/document`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if(!res.ok) throw new Error("Offline");
+        
+        const data = await res.json();
+        
+        if (data.ai_offline) {
+            document.getElementById('offline-banner').classList.remove('hidden');
+            mmResultText.innerHTML = "Simulation: This document appears to be a notice for a local agricultural subsidy. Please verify with your nearest government center.";
+        } else {
+            document.getElementById('offline-banner').classList.add('hidden');
+            mmResultText.innerHTML = data.analysis.replace(/\n/g, '<br>');
+        }
+    } catch (err) {
+        document.getElementById('offline-banner').classList.remove('hidden');
+        mmResultText.innerHTML = "Simulation: This document appears to be a notice for an agricultural subsidy. Ensure you have your Aadhaar card and land records ready to apply.";
+    } finally {
+        mmSpinner.classList.add('hidden');
+        mmBtnAnalyze.classList.remove('opacity-50');
+        mmResultArea.classList.remove('hidden');
+    }
+});

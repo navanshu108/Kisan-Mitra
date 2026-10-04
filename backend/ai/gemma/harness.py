@@ -16,7 +16,7 @@ from typing import List, Dict, Any
 class KisanMitraHarness:
     def __init__(self):
         self.api_key = os.getenv("GEMMA_API_KEY")
-        self.model_name = os.getenv("GEMMA_MODEL", "gemini-2.5-flash") # Fallback to available model
+        self.model_name = os.getenv("GEMMA_MODEL", "gemini-3.8-flash") # Fallback to available model
         
         # We handle missing API key gracefully for "offline mode" demo
         if self.api_key:
