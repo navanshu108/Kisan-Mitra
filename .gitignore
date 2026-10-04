@@ -1,0 +1,21 @@
+# Environments
+.env
+.env.local
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDEs
+.idea/
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Temporary uploads
+uploads/
