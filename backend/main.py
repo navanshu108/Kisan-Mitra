@@ -7,8 +7,11 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Ensure the root directory is in the Python path so 'from backend...' works
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Absolute path to the project root
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Ensure the root directory is in the Python path
+sys.path.insert(0, BASE_DIR)
 
 load_dotenv()
 
@@ -16,11 +19,12 @@ from backend.ai.gemma.harness import harness
 
 app = FastAPI(title="Kisan Mitra AI")
 
-app.mount("/css", StaticFiles(directory="frontend/css"), name="css")
-app.mount("/js", StaticFiles(directory="frontend/js"), name="js")
+# Use absolute paths so Vercel Serverless Functions don't crash on startup
+app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR, "frontend/css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(BASE_DIR, "frontend/js")), name="js")
 
 def load_schemes():
-    with open("data/demo-schemes/schemes.json", "r") as f:
+    with open(os.path.join(BASE_DIR, "data/demo-schemes/schemes.json"), "r") as f:
         return json.load(f)
 
 class SchemeRequest(BaseModel):
@@ -37,7 +41,7 @@ class ExplainRequest(BaseModel):
 
 @app.get("/")
 def serve_index():
-    return FileResponse("frontend/index.html")
+    return FileResponse(os.path.join(BASE_DIR, "frontend/index.html"))
 
 @app.post("/api/schemes")
 def find_schemes(req: SchemeRequest):
@@ -47,7 +51,6 @@ def find_schemes(req: SchemeRequest):
         state_match = scheme["stateId"] == "all" or scheme["stateId"] == req.stateId
         crop_match = "all" in scheme["cropIds"] or req.cropId in scheme["cropIds"]
         
-        # Land constraint logic
         land_match = True
         lc = scheme.get("landConstraints", "None")
         if lc.startswith(">"):
@@ -68,7 +71,6 @@ def find_schemes(req: SchemeRequest):
                 
             reasons.append(f"Land size compatible ({req.landArea} acres)")
             
-            # Category Reason
             cat = scheme.get("category", "")
             if cat == "fertilizer":
                 reasons.append("Provides fertilizer/nutrient-related support")
