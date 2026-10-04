@@ -2,30 +2,27 @@ import os
 import sys
 import json
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Absolute path to the project root
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Ensure the root directory is in the Python path
+# Ensure api directory is in path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
 load_dotenv()
 
-from backend.ai.gemma.harness import harness
+from ai.gemma.harness import harness
 
 app = FastAPI(title="Kisan Mitra AI")
 
-# Use absolute paths so Vercel Serverless Functions don't crash on startup
-app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR, "frontend/css")), name="css")
-app.mount("/js", StaticFiles(directory=os.path.join(BASE_DIR, "frontend/js")), name="js")
-
 def load_schemes():
-    with open(os.path.join(BASE_DIR, "data/demo-schemes/schemes.json"), "r") as f:
-        return json.load(f)
+    try:
+        with open(os.path.join(BASE_DIR, "data/demo-schemes/schemes.json"), "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading schemes: {e}")
+        return []
 
 class SchemeRequest(BaseModel):
     stateId: str
@@ -38,10 +35,6 @@ class SchemeRequest(BaseModel):
 class ExplainRequest(BaseModel):
     scheme_id: str
     language: str = "en"
-
-@app.get("/")
-def serve_index():
-    return FileResponse(os.path.join(BASE_DIR, "frontend/index.html"))
 
 @app.post("/api/schemes")
 def find_schemes(req: SchemeRequest):
@@ -110,6 +103,7 @@ async def analyze_document(file: UploadFile = File(...), language: str = Form("e
         "ai_offline": not harness.is_available
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Fallback for debugging Vercel 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "message": "Vercel API is running!"}
